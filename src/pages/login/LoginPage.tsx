@@ -11,7 +11,7 @@ import {
   Alert,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { login, saveSession } from "../../services/authService";
+import { login, saveSession, verify2FA } from "../../services/authService";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -20,6 +20,9 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<"credentials" | "2fa">("credentials");
+  const [pendingToken, setPendingToken] = useState("");
+  const [twoFACode, setTwoFACode] = useState("");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -27,10 +30,30 @@ export const LoginPage = () => {
     setLoading(true);
     try {
       const { token, tokenRefresco } = await login({ username, password });
-      saveSession(token, tokenRefresco, username);
-      navigate("/", { replace: true });
+      if (tokenRefresco === null) {
+        setPendingToken(token);
+        setStep("2fa");
+      } else {
+        saveSession(token, tokenRefresco, username);
+        navigate("/", { replace: true });
+      }
     } catch {
       setError("Usuario o contraseña incorrectos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handle2FASubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const { token, tokenRefresco } = await verify2FA(pendingToken, twoFACode);
+      saveSession(token, tokenRefresco ?? "", username);
+      navigate("/", { replace: true });
+    } catch {
+      setError("Código incorrecto. Intentá nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -89,82 +112,135 @@ export const LoginPage = () => {
           DA Valores
         </Typography>
 
-        <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
-          Iniciar sesión
-        </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary", mb: 4 }}>
-          Ingresá tus credenciales para continuar
-        </Typography>
+        {step === "credentials" ? (
+          <>
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
+              Iniciar sesión
+            </Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary", mb: 4 }}>
+              Ingresá tus credenciales para continuar
+            </Typography>
 
-        <Box component="form" onSubmit={handleSubmit} noValidate>
-          <TextField
-            label="Usuario"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            fullWidth
-            required
-            autoComplete="username"
-            autoFocus
-            sx={{ mb: 2.5 }}
-          />
+            <Box component="form" onSubmit={handleSubmit} noValidate>
+              <TextField
+                label="Usuario"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                fullWidth
+                required
+                autoComplete="username"
+                autoFocus
+                sx={{ mb: 2.5 }}
+              />
 
-          <TextField
-            label="Contraseña"
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            fullWidth
-            required
-            autoComplete="current-password"
-            sx={{ mb: 3 }}
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword((v) => !v)}
-                      edge="end"
-                      aria-label={
-                        showPassword
-                          ? "Ocultar contraseña"
-                          : "Mostrar contraseña"
-                      }
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
+              <TextField
+                label="Contraseña"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                fullWidth
+                required
+                autoComplete="current-password"
+                sx={{ mb: 3 }}
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword((v) => !v)}
+                          edge="end"
+                          aria-label={
+                            showPassword
+                              ? "Ocultar contraseña"
+                              : "Mostrar contraseña"
+                          }
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
+              {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {error}
+                </Alert>
+              )}
 
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            size="large"
-            disabled={loading || !username || !password}
-            sx={{
-              bgcolor: "bg_primary.main",
-              "&:hover": { bgcolor: "bg_secondary.main" },
-              py: 1.5,
-              fontWeight: 600,
-              fontSize: "1rem",
-            }}
-          >
-            {loading ? (
-              <CircularProgress size={24} sx={{ color: "#fff" }} />
-            ) : (
-              "Ingresar"
-            )}
-          </Button>
-        </Box>
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                size="large"
+                disabled={loading || !username || !password}
+                sx={{
+                  bgcolor: "bg_primary.main",
+                  "&:hover": { bgcolor: "bg_secondary.main" },
+                  py: 1.5,
+                  fontWeight: 600,
+                  fontSize: "1rem",
+                }}
+              >
+                {loading ? (
+                  <CircularProgress size={24} sx={{ color: "#fff" }} />
+                ) : (
+                  "Ingresar"
+                )}
+              </Button>
+            </Box>
+          </>
+        ) : (
+          <>
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
+              Verificación en dos pasos
+            </Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary", mb: 4 }}>
+              Ingresá el código de tu aplicación de autenticación
+            </Typography>
+
+            <Box component="form" onSubmit={handle2FASubmit} noValidate>
+              <TextField
+                label="Código 2FA"
+                value={twoFACode}
+                onChange={(e) => setTwoFACode(e.target.value)}
+                fullWidth
+                required
+                autoFocus
+                inputProps={{ inputMode: "numeric", maxLength: 6 }}
+                sx={{ mb: 3 }}
+              />
+
+              {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {error}
+                </Alert>
+              )}
+
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                size="large"
+                disabled={loading || !twoFACode}
+                sx={{
+                  bgcolor: "bg_primary.main",
+                  "&:hover": { bgcolor: "bg_secondary.main" },
+                  py: 1.5,
+                  fontWeight: 600,
+                  fontSize: "1rem",
+                }}
+              >
+                {loading ? (
+                  <CircularProgress size={24} sx={{ color: "#fff" }} />
+                ) : (
+                  "Verificar"
+                )}
+              </Button>
+            </Box>
+          </>
+        )}
       </Box>
     </Box>
   );
