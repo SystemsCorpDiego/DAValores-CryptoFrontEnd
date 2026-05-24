@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Diego\\\\clientes\\\\DA-Valores\\\\workspaces\\\\vsc\\\\DA-Cryto\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Diego\\\\clientes\\\\DA-Valores\\\\workspaces\\\\vsc\\\\DA-Cryto\" -Exclude \"node_modules\", \".claude\" | ForEach-Object { $_.FullName } | Sort-Object)"
+    ]
+  }
+}
