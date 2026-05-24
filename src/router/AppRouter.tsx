@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import PrivateRoute from "./PrivateRoute";
 import { LoginPage } from "../pages/login/LoginPage";
 import { RipioWidget } from "../pages/ripio-widget/RipioWidget";
+import { DashboardLayout } from "../layouts/DashboardLayout";
 
 const AppRouter = () => {
   return (
@@ -12,7 +13,9 @@ const AppRouter = () => {
         path="/ripioWidget"
         element={
           <PrivateRoute>
-            <RipioWidget />
+            <DashboardLayout>
+              <RipioWidget />
+            </DashboardLayout>
           </PrivateRoute>
         }
       />
