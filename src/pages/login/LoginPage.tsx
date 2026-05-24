@@ -26,8 +26,8 @@ export const LoginPage = () => {
     setError(null);
     setLoading(true);
     try {
-      const { token } = await login({ username, password });
-      saveSession(token, username);
+      const { token, tokenRefresco } = await login({ username, password });
+      saveSession(token, tokenRefresco, username);
       navigate("/", { replace: true });
     } catch {
       setError("Usuario o contraseña incorrectos.");
@@ -125,7 +125,9 @@ export const LoginPage = () => {
                       onClick={() => setShowPassword((v) => !v)}
                       edge="end"
                       aria-label={
-                        showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                        showPassword
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
                       }
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
