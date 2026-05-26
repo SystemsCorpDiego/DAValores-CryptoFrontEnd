@@ -29,12 +29,15 @@ export const LoginPage = () => {
     setError(null);
     setLoading(true);
     try {
-      const { token, tokenRefresco } = await login({ username, password });
+      const { token, tokenRefresco, cuentaEsco } = await login({
+        username,
+        password,
+      });
       if (tokenRefresco === null) {
         setPendingToken(token);
         setStep("2fa");
       } else {
-        saveSession(token, tokenRefresco, username);
+        saveSession(token, tokenRefresco, username, cuentaEsco);
         navigate("/", { replace: true });
       }
     } catch {
@@ -50,7 +53,7 @@ export const LoginPage = () => {
     setLoading(true);
     try {
       const { token, tokenRefresco } = await verify2FA(pendingToken, twoFACode);
-      saveSession(token, tokenRefresco ?? "", username);
+      saveSession(token, tokenRefresco ?? "", username, null);
       navigate("/", { replace: true });
     } catch {
       setError("Código incorrecto. Intentá nuevamente.");

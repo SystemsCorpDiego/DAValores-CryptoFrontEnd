@@ -1,15 +1,21 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_URL_BACKEND;
 
 export interface LoginRequest {
   username: string;
   password: string;
 }
 
+export interface cuentaEsco {
+  comitente: string;
+  comitenteDescripcion: string;
+  cuit: string;
+}
 export interface LoginResponse {
   token: string;
   tokenRefresco: string | null;
+  cuentaEsco: cuentaEsco | null;
 }
 
 export const SESSION_KEY = "stateLogin";
@@ -19,6 +25,7 @@ export interface SessionState {
   token: string;
   tokenRefresco: string | null;
   username: string;
+  cuentaEsco: cuentaEsco | null;
 }
 
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -39,12 +46,18 @@ export function saveSession(
   token: string,
   tokenRefresco: string,
   username: string,
+  cuentaEsco: cuentaEsco | null,
 ): void {
+  var sessionActual = getSession();
+  if (sessionActual && !cuentaEsco) {
+    cuentaEsco = sessionActual.cuentaEsco;
+  }
   const session: SessionState = {
     logged: true,
     token,
     tokenRefresco,
     username,
+    cuentaEsco,
   };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
