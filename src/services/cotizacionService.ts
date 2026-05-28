@@ -20,13 +20,21 @@ export interface Cotizacion {
   ventaRatio: number;
 }
 
-export async function getCotizaciones(): Promise<Cotizacion[]> {
+export async function getCotizacion(
+  request: CotizacionRequest,
+): Promise<Cotizacion> {
   const session = getSession();
-  const { data } = await axios.get<Cotizacion[]>(
-    `${API_URL}/crypto-providers/cotizar`,
-    {
-      headers: { Authorization: `Bearer ${session?.token}` },
+  const config = {
+    headers: {
+      Authorization: `Bearer YOUR_TOKEN_HERE`,
+      "Content-Type": "application/json",
     },
+  };
+
+  const { data } = await axios.post<Cotizacion>(
+    `${API_URL}/providers/cotizar`,
+    request,
+    config,
   );
   return data;
 }

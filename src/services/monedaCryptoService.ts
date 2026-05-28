@@ -10,7 +10,7 @@ export interface Moneda {
 
 export async function getMonedas(): Promise<Moneda[]> {
   const session = getSession();
-  const { data } = await axios.get<Moneda[]>(`${API_URL}/crypto/monedas`, {
+  const { data } = await axios.get<Moneda[]>(`${API_URL}/providers/monedas`, {
     headers: { Authorization: `Bearer ${session?.token}` },
   });
   return data;
