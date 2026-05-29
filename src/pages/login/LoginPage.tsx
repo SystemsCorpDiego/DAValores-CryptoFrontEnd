@@ -11,7 +11,8 @@ import {
   Alert,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { login, saveSession, verify2FA } from "../../services/authService";
+import { login, verify2FA } from "../../services/authService";
+import { saveSession } from "@/funciones/LocalStorageService";
 
 export const LoginPage = () => {
   const navigate = useNavigate();

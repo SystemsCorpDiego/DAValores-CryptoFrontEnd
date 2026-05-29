@@ -1,10 +1,16 @@
 import { useState, useEffect, useRef, ReactNode } from "react";
+import AlertaExitoOperacion from "@/components/AlertaExitoOperacion";
 import { Moneda, getMonedas } from "@/services/monedaCryptoService";
 import {
   CotizacionRequest,
   Cotizacion,
   getCotizacion,
 } from "@/services/cotizacionService";
+import {
+  OperacionRequest,
+  Operacion,
+  getOperacion,
+} from "@/services/operacionService";
 import {
   Box,
   Button,
@@ -19,6 +25,8 @@ import {
 } from "@mui/material";
 
 export const RipioWidget = () => {
+  //const originalLog = console.log;
+  //console.log = () => {};
   interface CotiMone {
     moneda: Moneda;
     cotizacion: Cotizacion | null;
@@ -27,6 +35,12 @@ export const RipioWidget = () => {
   const [lstCotizaciones, setLstCotizaciones] = useState<CotiMone[]>([]);
   const lstCotizacionesRef = useRef<CotiMone[]>([]);
   const [importes, setImportes] = useState<Record<string, string>>({});
+  const [alertaExitoMoneda, setAlertaExitoMoneda] = useState<string | null>(
+    null,
+  );
+  const [operacionActual, setOperacionActual] = useState<Operacion | null>(
+    null,
+  );
 
   // Mantiene el ref sincronizado con el estado
   useEffect(() => {
@@ -39,6 +53,7 @@ export const RipioWidget = () => {
 
       let regCoti: CotiMone;
       let lstAuxCoti: CotiMone[] = [];
+
       monedas?.forEach((reg) => {
         regCoti = { moneda: reg, cotizacion: null };
         console.log("forEach() => regCoti: " + JSON.stringify(regCoti));
@@ -47,35 +62,36 @@ export const RipioWidget = () => {
         console.log("forEach() => lstAuxCoti: " + JSON.stringify(lstAuxCoti));
       });
       console.log("*** lstAuxCoti: " + JSON.stringify(lstAuxCoti));
+
       setLstCotizaciones(lstAuxCoti);
     };
     ObtenerMonedas();
   }, []);
 
   function debeActualizar(coti: CotiMone): Boolean {
+    //console.log = originalLog;
     if (!coti.cotizacion) return true;
-    console.log(
-      "debeActualizar() - coti.cotizacion.expira: ",
-      coti.cotizacion.expira,
-    );
+    //console.log("debeActualizar() - coti.cotizacion.expira: ",coti.cotizacion.expira,);
     const dateExpira: Date = new Date(coti.cotizacion.expira);
-    console.log("debeActualizar() - date: ", dateExpira.toISOString());
+    //console.log("debeActualizar() - date: ", dateExpira.toISOString());
 
     const dateNow = new Date();
     const isoString = dateNow.toISOString();
-    console.log("debeActualizar() - dateNow: ", dateNow.toISOString());
+    //console.log("debeActualizar() - dateNow: ", dateNow.toISOString());
 
     if (dateExpira < dateNow) {
       console.log(
         "debeActualizar() - dateExpira MENOR - ACTUALIZAR TRUE ** !!",
       );
+      //console.log = () => {};
       return true;
     } else {
       console.log("debeActualizar() - dateExpira MAYOR - ACTUALIZAR FALSE");
     }
 
-    console.log(isoString);
+    //console.log(isoString);
 
+    //console.log = () => {};
     return false;
   }
 
@@ -124,15 +140,48 @@ export const RipioWidget = () => {
     return () => clearInterval(intervalId);
   }, []); // corre una sola vez — lee datos frescos via ref
 
-  const handleComprar = (item: CotiMone) => {
+  async function handleComprar(item: CotiMone): Promise<any> {
     const importe = parseFloat(importes[item.moneda.codigo] ?? "0");
+    if (!item || !item.cotizacion) {
+      //TODO: mensaje de error
+      return;
+    }
+
+    const request: OperacionRequest = {
+      tipo: "COMPRA",
+      idExternoProveedorCotizacion: item.cotizacion.idExternoProveedor,
+      cantidad: importe,
+    };
+
+    const operacion = await getOperacion(request);
+    /*
+    const operacion: Operacion = {
+      activoBase: "RTEST",
+      activoBaseCantidad: 1.33943778,
+      activoCoti: "ARS",
+      activoCotiCantidad: 2000,
+      ratio: 1493.1638,
+      tipo: "COMPRA",
+    };
+    */
+
+    if (operacion) {
+      setOperacionActual(operacion);
+      setAlertaExitoMoneda(item.moneda.codigo);
+      setTimeout(() => setAlertaExitoMoneda(null), 10000);
+      setImportes((prev) => ({
+        ...prev,
+        [item.moneda.codigo]: "",
+      }));
+    }
+
     console.log(
       "handleComprar - moneda:",
       item.moneda.codigo,
       "importe:",
       importe,
     );
-  };
+  }
 
   return (
     <Box
@@ -152,116 +201,134 @@ export const RipioWidget = () => {
       <Grid container spacing={2}>
         {lstCotizaciones.map((item) => (
           <Grid key={item.moneda.codigo} size={{ xs: 12, sm: 12, md: 12 }}>
-            <Card variant="outlined">
-              <CardContent>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mb: 1,
-                  }}
-                >
-                  <Typography sx={{ fontWeight: "bold" }} variant="h5">
-                    {item.moneda.codigo}
+            <Box sx={{ position: "relative" }}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography sx={{ fontWeight: "bold" }} variant="h5">
+                      {item.moneda.codigo}
+                    </Typography>
+                    <Chip
+                      label={item.cotizacion ? "Activo" : "Cargando..."}
+                      color={item.cotizacion ? "success" : "default"}
+                      size="small"
+                    />
+                  </Box>
+
+                  <Typography
+                    sx={{ fontWeight: "bold" }}
+                    variant="body2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    {item.moneda.descripcion}
                   </Typography>
-                  <Chip
-                    label={item.cotizacion ? "Activo" : "Cargando..."}
-                    color={item.cotizacion ? "success" : "default"}
-                    size="small"
-                  />
-                </Box>
 
-                <Typography
-                  sx={{ fontWeight: "bold" }}
-                  variant="body2"
-                  color="text.secondary"
-                  gutterBottom
-                >
-                  {item.moneda.descripcion}
-                </Typography>
+                  <Divider sx={{ my: 1 }} />
 
-                <Divider sx={{ my: 1 }} />
-
-                {item.cotizacion ? (
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
-                  >
-                    <Row
-                      label={<strong>Activo base</strong>}
-                      value={item.cotizacion.activoBase}
-                    />
-                    <Row
-                      label={<strong>Activo cotización</strong>}
-                      value={item.cotizacion.activoCoti}
-                    />
-                    <Divider sx={{ my: 1.5 }} />
-                    <Row
-                      label={<strong>Compra ratio</strong>}
-                      value={item.cotizacion.compraRatio}
-                    />
-                    <Row
-                      label={<strong>Compra comisión</strong>}
-                      value={item.cotizacion.compraComision}
-                    />
-                    <Row
-                      label={<strong>Venta ratio</strong>}
-                      value={item.cotizacion.ventaRatio}
-                    />
-                    <Row
-                      label={<strong>Venta comisión</strong>}
-                      value={item.cotizacion.ventaComision}
-                    />
-                    <Divider sx={{ my: 1.5 }} />
-                    <Row
-                      label="Expira"
-                      value={new Date(item.cotizacion.expira).toLocaleString()}
-                    />
-                    <Row label="ID externo" value={item.cotizacion.idExterno} />
-                    <Row
-                      label="ID externo proveedor"
-                      value={item.cotizacion.idExternoProveedor}
-                    />
-
-                    <Divider sx={{ my: 1.5 }} />
-
-                    <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                      <TextField
-                        label="Importe"
-                        type="number"
-                        size="small"
-                        value={importes[item.moneda.codigo] ?? ""}
-                        onChange={(e) => {
-                          console.log("onChange - item: ", item);
-                          console.log("onChange - importe: ", e.target.value);
-                          console.log("onChange - importes: ", importes);
-                          setImportes((prev) => ({
-                            ...prev,
-                            [item.moneda.codigo]: e.target.value,
-                          }));
-                        }}
-                        slotProps={{ htmlInput: { step: "0.01", min: "0" } }}
-                        sx={{ width: 180 }}
+                  {item.cotizacion ? (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 0.5,
+                      }}
+                    >
+                      <Row
+                        label={<strong>Activo base</strong>}
+                        value={item.cotizacion.activoBase}
                       />
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => handleComprar(item)}
-                        disabled={!importes[item.moneda.codigo]}
+                      <Row
+                        label={<strong>Activo cotización</strong>}
+                        value={item.cotizacion.activoCoti}
+                      />
+                      <Divider sx={{ my: 1.5 }} />
+                      <Row
+                        label={<strong>Compra ratio</strong>}
+                        value={item.cotizacion.compraRatio}
+                      />
+                      <Row
+                        label={<strong>Compra comisión</strong>}
+                        value={item.cotizacion.compraComision}
+                      />
+                      <Row
+                        label={<strong>Venta ratio</strong>}
+                        value={item.cotizacion.ventaRatio}
+                      />
+                      <Row
+                        label={<strong>Venta comisión</strong>}
+                        value={item.cotizacion.ventaComision}
+                      />
+                      <Divider sx={{ my: 1.5 }} />
+                      <Row
+                        label="Expira"
+                        value={new Date(
+                          item.cotizacion.expira,
+                        ).toLocaleString()}
+                      />
+                      <Row
+                        label="ID externo"
+                        value={item.cotizacion.idExterno}
+                      />
+                      <Row
+                        label="ID externo proveedor"
+                        value={item.cotizacion.idExternoProveedor}
+                      />
+
+                      <Divider sx={{ my: 1.5 }} />
+
+                      <Box
+                        sx={{ display: "flex", gap: 2, alignItems: "center" }}
                       >
-                        Comprar
-                      </Button>
+                        <TextField
+                          label="Importe"
+                          type="number"
+                          size="small"
+                          value={importes[item.moneda.codigo] ?? ""}
+                          onChange={(e) => {
+                            console.log("onChange - item: ", item);
+                            console.log("onChange - importe: ", e.target.value);
+                            console.log("onChange - importes: ", importes);
+                            setImportes((prev) => ({
+                              ...prev,
+                              [item.moneda.codigo]: e.target.value,
+                            }));
+                          }}
+                          slotProps={{ htmlInput: { step: "0.01", min: "0" } }}
+                          sx={{ width: 180 }}
+                        />
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={() => handleComprar(item)}
+                          disabled={!importes[item.moneda.codigo]}
+                        >
+                          Comprar
+                        </Button>
+                      </Box>
                     </Box>
-                  </Box>
-                ) : (
-                  <Box
-                    sx={{ display: "flex", justifyContent: "center", py: 2 }}
-                  >
-                    <CircularProgress size={24} />
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <Box
+                      sx={{ display: "flex", justifyContent: "center", py: 2 }}
+                    >
+                      <CircularProgress size={24} />
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+              <AlertaExitoOperacion
+                open={alertaExitoMoneda === item.moneda.codigo}
+                onClose={() => setAlertaExitoMoneda(null)}
+                operacion={operacionActual}
+              />
+            </Box>
           </Grid>
         ))}
       </Grid>

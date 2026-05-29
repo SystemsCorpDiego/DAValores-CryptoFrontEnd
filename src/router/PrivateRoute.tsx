@@ -1,13 +1,13 @@
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import { getSession } from "../services/authService";
+import localStorageService from "@/funciones/LocalStorageService";
 
 interface PrivateRouteProps {
   children: ReactNode;
 }
 
 const PrivateRoute = ({ children }: PrivateRouteProps) => {
-  const session = getSession();
+  const session = localStorageService.getSession();
 
   if (session?.logged) {
     return children;

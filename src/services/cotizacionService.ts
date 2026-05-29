@@ -1,7 +1,6 @@
-import axios from "axios";
-import { getSession } from "./authService";
+import oAxios from "@/components/axiosInstace";
 
-const API_URL = import.meta.env.VITE_URL_BACKEND;
+//const API_URL = import.meta.env.VITE_URL_BACKEND;
 
 export interface CotizacionRequest {
   activoBase: string;
@@ -23,18 +22,9 @@ export interface Cotizacion {
 export async function getCotizacion(
   request: CotizacionRequest,
 ): Promise<Cotizacion> {
-  const session = getSession();
-  const config = {
-    headers: {
-      Authorization: `Bearer YOUR_TOKEN_HERE`,
-      "Content-Type": "application/json",
-    },
-  };
+  //console.log(`getCotizacion - URL : ${API_URL}/providers/cotizar`);
 
-  const { data } = await axios.post<Cotizacion>(
-    `${API_URL}/providers/cotizar`,
-    request,
-    config,
-  );
+  //`${API_URL}/providers/cotizar`
+  const { data } = await oAxios.post<Cotizacion>("/providers/cotizar", request);
   return data;
 }

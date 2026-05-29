@@ -11,7 +11,8 @@ import {
 } from "@mui/material";
 import { CurrencyBitcoin, Logout } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
-import { clearSession, getSession } from "../services/authService";
+//import { clearSession, getSession } from "../services/authService";
+import LocalStorageService from "@/funciones/LocalStorageService";
 
 export const DRAWER_WIDTH = 260;
 
@@ -22,10 +23,10 @@ const navItems = [
 const SidebarContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const session = getSession();
+  const session = LocalStorageService.getSession();
 
   const handleLogout = () => {
-    clearSession();
+    LocalStorageService.clearSession();
     navigate("/login", { replace: true });
   };
 
@@ -52,7 +53,9 @@ const SidebarContent = () => {
       <Divider sx={{ borderColor: "rgba(255,255,255,0.15)" }} />
 
       {/* User info */}
-      <Box sx={{ px: 3, py: 2, display: "flex", alignItems: "center", gap: 1.5 }}>
+      <Box
+        sx={{ px: 3, py: 2, display: "flex", alignItems: "center", gap: 1.5 }}
+      >
         <Avatar
           sx={{
             bgcolor: "rgba(255,255,255,0.2)",
@@ -95,7 +98,13 @@ const SidebarContent = () => {
               <ListItemText
                 primary={item.label}
                 slotProps={{
-                  primary: { sx: { color: "#fff", fontWeight: active ? 600 : 400, fontSize: 14 } },
+                  primary: {
+                    sx: {
+                      color: "#fff",
+                      fontWeight: active ? 600 : 400,
+                      fontSize: 14,
+                    },
+                  },
                 }}
               />
             </ListItemButton>
